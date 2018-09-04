@@ -3,19 +3,7 @@
  * http://maplant.com/gc.html
  */
 
-/*
- * Each memory block header
- */
-typedef struct header {
-    unsigned int  size;
-    struct header *next;
-} header_t;
-
-
-static header_t base;            /* First zero sized block */
-static header_t *freep = &base;  /* Pointer to first free block of memory */
-static header_t *usedp;          /* Pointer to first used block of memory */
-
+#include "gc.h"
 
 /*
  * Scan the free list and look for a place to put the block. 
@@ -50,3 +38,33 @@ add_to_free_list(header_t *bp) {
 
     freep = p;
 }
+
+
+/*
+ * Ask for more memory from the kernel using the sbrk() sys call
+ * If the requested page size is less than our minimum page
+ * size then we pump up the requested size to match the page. 
+ * Once we get the page(s) we add it to the free list
+ */
+static header_t*
+morecore(size_t num_units) {
+    void *vp;
+    header_t *up;
+
+    if (num_units < MIN_ALLOC_SIZE)
+        num_units = MIN_ALLOC_SIZE;
+
+    if ((vp = sbrk(num_units * sizeof(header_t))) == (void *) -1)
+        return (NULL);
+
+    up = (header_t *)vp;
+    up->size = num_units;
+    add_to_free_list(up);
+    return freep;
+}
+
+
+int main() {
+    return 0;
+}
+    

@@ -33,4 +33,21 @@ General Design :
      expensive, it will be done in page size chunks. Page is the smallest unit of virtual mem
      that can be mapped to phsyical memory. 
 
+        - morecore() requests from the kernel more memory based on "units" of memory requested
+        - We follow a paging model so if the requested mem units are not 4096 then we bump it up to so. 
+        - Then we call on the sbrk() system call requesting the number of units
+            - On success we get a pointer to the start of the new page
+            - Failure returns a void pointer set to 1
+        - Once we get the extra memunits that we need it is added to the free list with add_to_free_list
+          function.
+
+    * add_to_free_list() is used to add the newly requested/freed up memory to our free list
+        - First, we get to the point in the free list where this page of memory can fit in
+        - If it neatly fits in then it is sort of like a big blob sharing the common header
+            if (bp + bp->size == p->next) {
+                bp->size += p->next->size;
+                bp->next = p->next->next;
+            ....
+        - Else, if it doesn't then we just shove in the page as a new entry at this free location.
+
   
