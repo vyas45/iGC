@@ -64,6 +64,61 @@ morecore(size_t num_units) {
 }
 
 
+/*
+ * THE Allocator
+ *
+ * Scan the free list and find the block that is
+ * as big as the amount of memory requested
+ *
+ * As we return the "first" block that we find 
+ * this is "first-fit" allocation
+ *
+ * Note: the size is in header-sized blocks and not
+ * bytes
+ *
+ */
+void* 
+GC_malloc(size_t alloc_size) {
+    size_t num_units;
+    header_t *p, *prevp;
+
+    num_units = (alloc_size + sizeof(header_t) - 1)/sizeof(header_t)  + 1;
+    prevp = freep;
+
+    for (p = prevp->next;; prevp = p, p = p->next) {
+        /* Potential big-enough block */
+        if (p->size >= num_units) {
+            /* Exact size block */
+            if (p->size == num_units) {
+                prevp->next = p->next;
+            } else {
+                p->size -= num_units;
+                p += p->size;
+                p->size = num_units;
+            }
+
+            freep = prevp;
+
+            /* Add p to the used list */
+            if (usedp == NULL)
+                usedp = p->next = p;
+            else {
+                p->next = usedp->next;
+                usedp->next = p;
+            }
+
+            return (void *) (p+1);
+        }
+
+        /* Not enough memory */
+        if (p == freep) {
+            p = morecore(num_units);
+            if (p == NULL)
+                return (NULL);
+        }
+    }
+}
+
 int main() {
     return 0;
 }
